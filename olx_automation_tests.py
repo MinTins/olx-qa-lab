@@ -386,15 +386,29 @@ class OLXTestAutomation:
             main_page.enter_search_query('PlayStation 5')
             main_page.click_search()
             
-            time.sleep(1.5)
-            current_url = search_results.get_current_url()
+            time.sleep(3)
+            
+            total_count_text = "Не вдалося отримати кількість"
             
             try:
-                total_count_element = self.driver.find_element(By.CSS_SELECTOR, 'span[data-testid="total-count"]')
+                wait = WebDriverWait(self.driver, 10)
+                total_count_element = wait.until(
+                    EC.presence_of_element_located((By.CSS_SELECTOR, 'span[data-testid="total-count"]'))
+                )
                 total_count_text = total_count_element.text
                 print(f"\n📊 {total_count_text}")
-            except:
-                total_count_text = "Не вдалося отримати кількість"
+            except TimeoutException:
+                try:
+                    total_count_element = self.driver.find_element(By.XPATH, "//span[contains(text(), 'знайшли') or contains(text(), 'оголошень')]")
+                    total_count_text = total_count_element.text
+                    print(f"\n📊 {total_count_text}")
+                except:
+                    ad_cards = self.driver.find_elements(By.CSS_SELECTOR, 'div[data-cy="l-card"]')
+                    if len(ad_cards) > 0:
+                        total_count_text = f"Знайдено {len(ad_cards)}+ оголошень на сторінці"
+                        print(f"\n📊 {total_count_text}")
+            
+            current_url = search_results.get_current_url()
             
             if 'q-PlayStation-5' in current_url or 'q-playstation-5' in current_url.lower():
                 self.log_test_result("Пошук PlayStation 5", True, 
@@ -421,7 +435,7 @@ class OLXTestAutomation:
             main_page.enter_location('Київська область')
             main_page.click_search()
             
-            time.sleep(2)
+            time.sleep(2.5)
             
             try:
                 cookies_overlay = self.driver.find_elements(By.CSS_SELECTOR, '[data-testid="cookies-overlay__container"]')
@@ -432,8 +446,13 @@ class OLXTestAutomation:
             except:
                 pass
             
+            category_applied = False
+            
             try:
-                category_dropdown = self.driver.find_element(By.CSS_SELECTOR, 'button[data-testid="category-dropdown"]')
+                category_dropdown = WebDriverWait(self.driver, 10).until(
+                    EC.presence_of_element_located((By.CSS_SELECTOR, 'button[data-testid="category-dropdown"]'))
+                )
+                
                 current_category_text = category_dropdown.text.strip()
                 
                 if 'Телефони' in current_category_text or 'телефони' in current_category_text.lower():
@@ -443,36 +462,30 @@ class OLXTestAutomation:
                     self.driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", category_dropdown)
                     time.sleep(0.5)
                     
-                    try:
-                        self.driver.execute_script("arguments[0].click();", category_dropdown)
-                    except:
-                        category_dropdown.click()
-                    
-                    time.sleep(0.8)
+                    self.driver.execute_script("arguments[0].click();", category_dropdown)
+                    time.sleep(1.2)
                     
                     try:
-                        electronics_button = WebDriverWait(self.driver, 5).until(
-                            EC.element_to_be_clickable((By.XPATH, '//button[@data-categoryid="37"]'))
+                        electronics_button = WebDriverWait(self.driver, 8).until(
+                            EC.presence_of_element_located((By.XPATH, '//button[@data-categoryid="37" and @role="menuitem"]'))
                         )
+                        time.sleep(0.3)
                         self.driver.execute_script("arguments[0].click();", electronics_button)
-                        time.sleep(0.5)
-                    except:
-                        print("Попередження: Не вдалося клікнути 'Електроніка'")
-                    
-                    try:
-                        phones_button = WebDriverWait(self.driver, 5).until(
-                            EC.element_to_be_clickable((By.XPATH, '//button[@data-categoryid="44"]'))
+                        time.sleep(1)
+                        
+                        phones_button = WebDriverWait(self.driver, 8).until(
+                            EC.presence_of_element_located((By.XPATH, '//button[@data-categoryid="44" and @role="menuitem"]'))
                         )
+                        time.sleep(0.3)
                         self.driver.execute_script("arguments[0].click();", phones_button)
-                        time.sleep(1.5)
+                        time.sleep(2)
                         category_applied = True
-                    except:
-                        print("Попередження: Не вдалося клікнути 'Телефони та аксесуари'")
-                        category_applied = False
+                        
+                    except TimeoutException:
+                        pass
                 
-            except Exception as e:
-                print(f"Попередження: Помилка при роботі з категорією: {e}")
-                category_applied = False
+            except Exception:
+                pass
             
             time.sleep(1)
             current_url = search_results.get_current_url()
